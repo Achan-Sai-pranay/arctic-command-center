@@ -165,16 +165,16 @@ export function BlueprintCanvas({
         }}
       >
         <div
-          className="absolute left-1/2 top-1/2 w-[94%] -translate-x-1/2 -translate-y-1/2"
+          className="absolute inset-0 flex items-center justify-center p-4"
           style={{
-            transform: `translate(calc(-50% + ${offset.x}px), calc(-50% + ${offset.y}px)) scale(${zoom})`,
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
             transformOrigin: "center center",
             transition: drag.current ? "none" : "transform 120ms ease-out",
           }}
         >
           <div
-            className="relative w-full overflow-hidden rounded-sm border border-gov-border bg-white shadow-[0_10px_40px_-24px_rgba(0,42,84,0.6)]"
-            style={{ aspectRatio: String(ratio) }}
+            className="relative overflow-hidden rounded-sm border border-gov-border bg-white shadow-[0_10px_40px_-24px_rgba(0,42,84,0.6)]"
+            style={{ aspectRatio: String(ratio), height: "100%", width: "auto", maxWidth: "100%" }}
           >
             <img
               src={img}
