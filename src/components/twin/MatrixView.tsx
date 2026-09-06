@@ -1,7 +1,5 @@
 import type { Reading } from "@/lib/telemetry";
-import { FLOOR_ROOMS, SECTION_ZONES, SUBSYSTEM_LABELS, type Status, type Subsystem } from "@/lib/twin-data";
-
-const ALL = [...FLOOR_ROOMS, ...SECTION_ZONES];
+import { BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, SUBSYSTEM_LABELS, type Status, type Subsystem } from "@/lib/twin-data";
 
 const DOT: Record<Status, string> = {
   normal: "bg-gov-normal",
@@ -10,16 +8,19 @@ const DOT: Record<Status, string> = {
 };
 
 export function MatrixView({
+  station = "maitri",
   readings,
   filters,
   selected,
   onSelect,
 }: {
+  station?: string;
   readings: Record<string, Reading>;
   filters: Record<Subsystem, boolean>;
   selected: string | null;
   onSelect: (id: string) => void;
 }) {
+  const ALL = station === "maitri" ? MAITRI_ROOMS : [...BHARATI_ROOMS, ...SECTION_ZONES];
   const zones = ALL.filter((z) => z.subsystems.some((s) => filters[s]));
 
   return (

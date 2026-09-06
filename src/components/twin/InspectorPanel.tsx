@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { Reading } from "@/lib/telemetry";
-import { FLOOR_ROOMS, SECTION_ZONES, type Status } from "@/lib/twin-data";
+import { BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, type Status } from "@/lib/twin-data";
 
-const ALL = [...FLOOR_ROOMS, ...SECTION_ZONES];
+const ALL = [...BHARATI_ROOMS, ...MAITRI_ROOMS, ...SECTION_ZONES];
 
 const STATUS_TEXT: Record<Status, string> = {
   normal: "text-gov-normal",

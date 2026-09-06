@@ -82,6 +82,7 @@ function Dashboard() {
           <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
             {view === "matrix" ? (
               <MatrixView
+                station={station}
                 readings={readings}
                 filters={filters}
                 selected={selected}
