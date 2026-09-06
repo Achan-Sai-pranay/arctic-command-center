@@ -261,12 +261,26 @@ export function BlueprintCanvas({
                 : null)
             : null;
           if (!hover || !hoverZone || !hoverReading) return null;
+
+          const containerW = containerRef.current?.clientWidth ?? 800;
+          const containerH = containerRef.current?.clientHeight ?? 600;
+          const tooltipW = 230;
+          const tooltipH = 140;
+
+          // Flip tooltip to the left if hovering near the right side of the canvas
+          const showOnLeft = hover.x + tooltipW + 20 > containerW;
+          const leftPos = showOnLeft
+            ? Math.max(8, hover.x - tooltipW - 14)
+            : Math.min(containerW - tooltipW - 8, hover.x + 14);
+
+          const topPos = clamp(hover.y - 60, 8, containerH - tooltipH - 8);
+
           return (
             <div
-              className="pointer-events-none absolute z-20 w-56 rounded-sm border border-gov-border bg-white/97 p-2.5 shadow-lg backdrop-blur"
+              className="pointer-events-none absolute z-20 w-56 rounded-sm border border-gov-border bg-white/97 p-2.5 shadow-lg backdrop-blur transition-all duration-75"
               style={{
-                left: clamp(hover.x + 14, 8, (containerRef.current?.clientWidth ?? 800) - 240),
-                top: Math.max(8, hover.y - 110),
+                left: leftPos,
+                top: topPos,
               }}
             >
               <p className="truncate text-xs font-bold text-gov-text">{hoverZone.name}</p>
