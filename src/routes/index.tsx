@@ -62,6 +62,8 @@ function Dashboard() {
           pushLog("INFO", "Station Switch", `Operator switched telemetry context to ${s.toUpperCase()} station.`);
         }}
         alarms={alarms}
+        log={log}
+        onSelectZone={(id) => setSelected(id)}
       />
 
       <div className="flex min-h-0 flex-1">
