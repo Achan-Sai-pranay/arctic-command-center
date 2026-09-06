@@ -29,7 +29,7 @@ export function InspectorPanel({
   onLog,
 }: {
   selected: string | null;
-  reading?: Reading;
+  reading: Reading | undefined;
   onUpdate: (id: string, patch: Partial<Reading>) => void;
   onLog: (level: "INFO" | "WARN" | "CRITICAL" | "SUCCESS", source: string, message: string) => void;
 }) {

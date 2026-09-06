@@ -115,8 +115,8 @@ export function useTelemetry() {
       });
 
       if (Math.random() > 0.35) {
-        const room = ALL[Math.floor(Math.random() * ALL.length)];
-        const tpl = LOG_TEMPLATES[Math.floor(Math.random() * LOG_TEMPLATES.length)];
+        const room = ALL[Math.floor(Math.random() * ALL.length)]!;
+        const tpl = LOG_TEMPLATES[Math.floor(Math.random() * LOG_TEMPLATES.length)]!;
         pushLog(tpl.level, room.name, tpl.message(room.name));
       }
     }, 3000);
@@ -124,7 +124,11 @@ export function useTelemetry() {
   }, [pushLog]);
 
   const update = useCallback((id: string, patch: Partial<Reading>) => {
-    setReadings((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+    setReadings((prev) => {
+      const cur = prev[id];
+      if (!cur) return prev;
+      return { ...prev, [id]: { ...cur, ...patch } };
+    });
   }, []);
 
   const alarms = useMemo(

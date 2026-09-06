@@ -53,9 +53,9 @@ export function BlueprintCanvas({
   const visible = zones.filter((z) => z.subsystems.some((s) => filters[s]));
   const img =
     bg === "plan" ? floorplanAsset.url : bg === "section" ? sectionAsset.url : transverseAsset.url;
-  const ratio = bg === "plan" ? 1545 / 1018 : bg === "section" ? 1600 / 617 : 1600 / 819;
+  const ratio = bg === "plan" ? 1545 / 1018 : bg === "section" ? 1600 / 617 : 1600 / 813;
 
-  const wheelRef = useRef((e: WheelEvent) => {});
+  const wheelRef = useRef<(e: WheelEvent) => void>(() => {});
   wheelRef.current = (e: WheelEvent) => {
     const el = containerRef.current;
     if (!el) return;
@@ -236,10 +236,10 @@ export function BlueprintCanvas({
               {zones.find((z) => z.id === hover.id)?.grid}
             </p>
             <dl className="space-y-0.5 font-mono text-[10px] text-gov-muted">
-              <Row label="TEMP" value={`${readings[hover.id].temp.toFixed(1)} °C`} />
-              <Row label="HUMIDITY" value={`${readings[hover.id].humidity.toFixed(0)} %`} />
-              <Row label="OCCUPANCY" value={`${readings[hover.id].occupancy} crew`} />
-              <Row label="STATUS" value={readings[hover.id].status.toUpperCase()} />
+              <Row label="TEMP" value={`${readings[hover.id]!.temp.toFixed(1)} °C`} />
+              <Row label="HUMIDITY" value={`${readings[hover.id]!.humidity.toFixed(0)} %`} />
+              <Row label="OCCUPANCY" value={`${readings[hover.id]!.occupancy} crew`} />
+              <Row label="STATUS" value={readings[hover.id]!.status.toUpperCase()} />
             </dl>
           </div>
         )}
