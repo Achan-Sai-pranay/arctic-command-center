@@ -59,28 +59,75 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Government Light Theme Palette */
+  --color-gov-navy-header: var(--gov-navy-header);
+  --color-gov-navy-primary: var(--gov-navy-primary);
+  --color-gov-saffron: var(--gov-saffron-accent);
+  --color-gov-bg: var(--gov-bg-main);
+  --color-gov-card: var(--gov-bg-card);
+  --color-gov-border: var(--gov-border);
+  --color-gov-text: var(--gov-text-primary);
+  --color-gov-muted: var(--gov-text-secondary);
+  --color-gov-disabled: var(--gov-text-disabled);
+  --color-gov-normal: var(--gov-status-normal);
+  --color-gov-warning: var(--gov-status-warning);
+  --color-gov-critical: var(--gov-status-critical);
+  --color-gov-active: var(--gov-status-active);
+
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
+  --radius: 0.375rem;
+
+  /* Government Light Theme Palette */
+  --gov-navy-header: #002a54;
+  --gov-navy-primary: #1e40af;
+  --gov-saffron-accent: #d97706;
+  --gov-saffron-bright: #ff9933;
+
+  --gov-bg-main: #f4f6f9;
+  --gov-bg-card: #ffffff;
+  --gov-border: #e2e8f0;
+  --gov-grid-line: #d1d5db;
+  --gov-blueprint-mask: rgba(0, 42, 84, 0.05);
+
+  --gov-text-primary: #0f172a;
+  --gov-text-secondary: #475569;
+  --gov-text-disabled: #94a3b8;
+
+  --gov-status-normal: #15803d;
+  --gov-status-warning: #d97706;
+  --gov-status-critical: #dc2626;
+  --gov-status-active: #0284c7;
+
+  --gov-fill-normal: rgba(21, 128, 61, 0.15);
+  --gov-fill-warning: rgba(217, 119, 6, 0.2);
+  --gov-fill-critical: rgba(220, 38, 38, 0.25);
+  --gov-fill-active: rgba(2, 132, 199, 0.3);
+
+  --shadow-panel: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px -16px rgba(0, 42, 84, 0.35);
+
+  --background: #f4f6f9;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
+  --primary: #1e40af;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.968 0.007 247.896);
   --secondary-foreground: oklch(0.208 0.042 265.755);
   --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
+  --muted-foreground: #475569;
   --accent: oklch(0.968 0.007 247.896);
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
+  --border: #e2e8f0;
+  --input: #e2e8f0;
   --ring: oklch(0.704 0.04 256.788);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
@@ -140,5 +187,40 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+  }
+}
+
+@keyframes gov-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes gov-ticker {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@utility gov-pulse-slow {
+  animation: gov-pulse 2.6s ease-in-out infinite;
+}
+
+@utility gov-pulse-fast {
+  animation: gov-pulse 1.05s ease-in-out infinite;
+}
+
+@utility gov-ticker {
+  animation: gov-ticker 38s linear infinite;
+}
+
+@utility gov-panel {
+  background: var(--gov-bg-card);
+  border-color: var(--gov-border);
+  box-shadow: var(--shadow-panel);
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
 }
