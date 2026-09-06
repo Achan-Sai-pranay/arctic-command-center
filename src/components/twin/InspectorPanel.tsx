@@ -34,8 +34,31 @@ export function InspectorPanel({
   onLog: (level: "INFO" | "WARN" | "CRITICAL" | "SUCCESS", source: string, message: string) => void;
 }) {
   const zone = ALL.find((z) => z.id === selected);
+  const activeReading =
+    reading ||
+    (zone
+      ? {
+          temp: zone.baseTemp,
+          humidity: 44,
+          airflow: 250,
+          ppm: zone.status === "critical" ? 1250 : zone.status === "warning" ? 890 : 440,
+          power: zone.basePower,
+          occupancy: zone.baseOccupancy,
+          status: zone.status,
+          target: Math.round(zone.baseTemp),
+          fan: zone.subsystems.includes("hvac"),
+          locked: false,
+          alarmSilenced: false,
+          crew: [],
+          history: Array.from({ length: 24 }, (_, i) => ({
+            t: `${String(i).padStart(2, "0")}:00`,
+            temp: zone.baseTemp + Math.sin((i / 24) * Math.PI * 2) * 1.2,
+            power: zone.basePower,
+          })),
+        }
+      : undefined);
 
-  if (!zone || !reading) {
+  if (!zone || !activeReading) {
     return (
       <aside className="hidden w-[320px] shrink-0 flex-col border-l border-gov-border bg-gov-card xl:flex">
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
@@ -63,21 +86,21 @@ export function InspectorPanel({
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
         <div className="flex items-center justify-between rounded-sm border border-gov-border bg-gov-bg px-2.5 py-2">
           <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-gov-muted">Zone Status</span>
-          <span className={`font-mono text-xs font-bold ${STATUS_TEXT[reading.status]}`}>
-            ● {reading.status.toUpperCase()}
+          <span className={`font-mono text-xs font-bold ${STATUS_TEXT[activeReading.status]}`}>
+            ● {activeReading.status.toUpperCase()}
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <Metric icon={Thermometer} label="Temperature" value={`${reading.temp.toFixed(1)}°C`} />
-          <Metric icon={Fan} label="Airflow" value={`${reading.airflow.toFixed(0)} CFM`} />
+          <Metric icon={Thermometer} label="Temperature" value={`${activeReading.temp.toFixed(1)}°C`} />
+          <Metric icon={Fan} label="Airflow" value={`${activeReading.airflow.toFixed(0)} CFM`} />
           <Metric
             icon={Flame}
             label="Smoke / CO₂"
-            value={`${reading.ppm.toFixed(0)} PPM`}
-            danger={reading.ppm > 1100}
+            value={`${activeReading.ppm.toFixed(0)} PPM`}
+            danger={activeReading.ppm > 1100}
           />
-          <Metric icon={Zap} label="Power Draw" value={`${reading.power.toFixed(2)} kW`} />
+          <Metric icon={Zap} label="Power Draw" value={`${activeReading.power.toFixed(2)} kW`} />
         </div>
 
         <div className="rounded-sm border border-gov-border p-2.5">
@@ -85,13 +108,13 @@ export function InspectorPanel({
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-gov-muted">
               Target Threshold
             </span>
-            <span className="font-mono text-xs font-bold text-gov-navy-primary">{reading.target}°C</span>
+            <span className="font-mono text-xs font-bold text-gov-navy-primary">{activeReading.target}°C</span>
           </div>
           <input
             type="range"
             min={-20}
             max={40}
-            value={reading.target}
+            value={activeReading.target}
             aria-label="Temperature target threshold"
             onChange={(e) => onUpdate(zone.id, { target: Number(e.target.value) })}
             className="w-full accent-[var(--gov-navy-primary)]"
@@ -102,12 +125,12 @@ export function InspectorPanel({
           <div className="mb-1.5 flex items-center gap-2">
             <Users className="h-3.5 w-3.5 text-gov-muted" />
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-gov-muted">
-              Occupancy · {reading.occupancy}
+              Occupancy · {activeReading.occupancy}
             </span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {reading.crew.length === 0 && <span className="text-[11px] text-gov-disabled">Unoccupied zone</span>}
-            {reading.crew.map((c) => (
+            {activeReading.crew.length === 0 && <span className="text-[11px] text-gov-disabled">Unoccupied zone</span>}
+            {activeReading.crew.map((c) => (
               <span
                 key={c}
                 className="rounded-sm border border-gov-border bg-gov-bg px-1.5 py-0.5 font-mono text-[10px] text-gov-text"
@@ -118,8 +141,8 @@ export function InspectorPanel({
           </div>
         </div>
 
-        <Chart title="24H Temperature (°C)" data={reading.history} dataKey="temp" color="#0284c7" area />
-        <Chart title="24H Energy Consumption (kW)" data={reading.history} dataKey="power" color="#d97706" />
+        <Chart title="24H Temperature (°C)" data={activeReading.history} dataKey="temp" color="#0284c7" area />
+        <Chart title="24H Energy Consumption (kW)" data={activeReading.history} dataKey="power" color="#d97706" />
 
         <div className="space-y-1.5">
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-gov-muted">Remote Control</p>
@@ -127,35 +150,35 @@ export function InspectorPanel({
             icon={Thermometer}
             label="Override Heating (+1°C)"
             onClick={() => {
-              onUpdate(zone.id, { target: reading.target + 1 });
-              act(`heating setpoint overridden to ${reading.target + 1}°C.`, "SUCCESS");
+              onUpdate(zone.id, { target: activeReading.target + 1 });
+              act(`heating setpoint overridden to ${activeReading.target + 1}°C.`, "SUCCESS");
             }}
           />
           <ControlBtn
             icon={Fan}
-            label={reading.fan ? "Toggle Exhaust Fan — ON" : "Toggle Exhaust Fan — OFF"}
-            active={reading.fan}
+            label={activeReading.fan ? "Toggle Exhaust Fan — ON" : "Toggle Exhaust Fan — OFF"}
+            active={activeReading.fan}
             onClick={() => {
-              onUpdate(zone.id, { fan: !reading.fan });
-              act(`exhaust fan ${reading.fan ? "stopped" : "started"}.`);
+              onUpdate(zone.id, { fan: !activeReading.fan });
+              act(`exhaust fan ${activeReading.fan ? "stopped" : "started"}.`);
             }}
           />
           <ControlBtn
-            icon={reading.locked ? Lock : Unlock}
-            label={reading.locked ? "Unlock Door" : "Lock Door"}
-            active={reading.locked}
+            icon={activeReading.locked ? Lock : Unlock}
+            label={activeReading.locked ? "Unlock Door" : "Lock Door"}
+            active={activeReading.locked}
             onClick={() => {
-              onUpdate(zone.id, { locked: !reading.locked });
-              act(`door ${reading.locked ? "unlocked" : "locked"} by remote operator.`, "WARN");
+              onUpdate(zone.id, { locked: !activeReading.locked });
+              act(`door ${activeReading.locked ? "unlocked" : "locked"} by remote operator.`, "WARN");
             }}
           />
           <ControlBtn
             icon={BellOff}
-            label={reading.alarmSilenced ? "Alarm Silenced" : "Silence Alarm"}
-            active={reading.alarmSilenced}
+            label={activeReading.alarmSilenced ? "Alarm Silenced" : "Silence Alarm"}
+            active={activeReading.alarmSilenced}
             onClick={() => {
-              onUpdate(zone.id, { alarmSilenced: !reading.alarmSilenced });
-              act(`local alarm ${reading.alarmSilenced ? "re-armed" : "silenced"}.`, "WARN");
+              onUpdate(zone.id, { alarmSilenced: !activeReading.alarmSilenced });
+              act(`local alarm ${activeReading.alarmSilenced ? "re-armed" : "silenced"}.`, "WARN");
             }}
           />
         </div>

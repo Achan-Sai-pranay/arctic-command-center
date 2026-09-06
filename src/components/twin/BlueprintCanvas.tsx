@@ -221,28 +221,41 @@ export function BlueprintCanvas({
           </div>
         </div>
 
-        {hover && readings[hover.id] && (
-          <div
-            className="pointer-events-none absolute z-20 w-52 rounded-sm border border-gov-border bg-white/97 p-2.5 shadow-lg backdrop-blur"
-            style={{
-              left: clamp(hover.x + 14, 8, (containerRef.current?.clientWidth ?? 800) - 220),
-              top: Math.max(8, hover.y - 90),
-            }}
-          >
-            <p className="truncate text-xs font-bold text-gov-text">
-              {zones.find((z) => z.id === hover.id)?.name}
-            </p>
-            <p className="mb-1.5 font-mono text-[10px] text-gov-muted">
-              {zones.find((z) => z.id === hover.id)?.grid}
-            </p>
-            <dl className="space-y-0.5 font-mono text-[10px] text-gov-muted">
-              <Row label="TEMP" value={`${readings[hover.id]!.temp.toFixed(1)} °C`} />
-              <Row label="HUMIDITY" value={`${readings[hover.id]!.humidity.toFixed(0)} %`} />
-              <Row label="OCCUPANCY" value={`${readings[hover.id]!.occupancy} crew`} />
-              <Row label="STATUS" value={readings[hover.id]!.status.toUpperCase()} />
-            </dl>
-          </div>
-        )}
+        {(() => {
+          const hoverZone = hover ? zones.find((z) => z.id === hover.id) : null;
+          const hoverReading = hover
+            ? readings[hover.id] ||
+              (hoverZone
+                ? {
+                    temp: hoverZone.baseTemp,
+                    humidity: 45,
+                    occupancy: hoverZone.baseOccupancy,
+                    power: hoverZone.basePower,
+                    status: hoverZone.status,
+                  }
+                : null)
+            : null;
+          if (!hover || !hoverZone || !hoverReading) return null;
+          return (
+            <div
+              className="pointer-events-none absolute z-20 w-56 rounded-sm border border-gov-border bg-white/97 p-2.5 shadow-lg backdrop-blur"
+              style={{
+                left: clamp(hover.x + 14, 8, (containerRef.current?.clientWidth ?? 800) - 240),
+                top: Math.max(8, hover.y - 110),
+              }}
+            >
+              <p className="truncate text-xs font-bold text-gov-text">{hoverZone.name}</p>
+              <p className="mb-1.5 font-mono text-[10px] text-gov-muted">{hoverZone.grid}</p>
+              <dl className="space-y-0.5 font-mono text-[10px] text-gov-muted">
+                <Row label="TEMP" value={`${hoverReading.temp.toFixed(1)} °C`} />
+                <Row label="HUMIDITY" value={`${hoverReading.humidity.toFixed(0)} %`} />
+                <Row label="OCCUPANCY" value={`${hoverReading.occupancy} crew`} />
+                <Row label="POWER" value={`${hoverReading.power.toFixed(1)} kW`} />
+                <Row label="STATUS" value={hoverReading.status.toUpperCase()} />
+              </dl>
+            </div>
+          );
+        })()}
 
         <div className="absolute bottom-3 right-3 flex flex-col gap-1 rounded-sm border border-gov-border bg-white p-1 shadow-md">
           <CtrlBtn onClick={() => zoomBy(1.25)} label="Zoom in">
