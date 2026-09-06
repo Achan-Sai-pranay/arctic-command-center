@@ -22,13 +22,33 @@ const LEVEL_STYLE: Record<LogLevel, { badge: string; icon: typeof AlertTriangle 
 
 function findRoomId(source: string, message: string): string | null {
   const allRooms = [...BHARATI_ROOMS, ...MAITRI_ROOMS, ...SECTION_ZONES];
-  const match = allRooms.find(
-    (r) =>
-      r.name.toLowerCase() === source.toLowerCase() ||
-      r.name.toLowerCase().includes(source.toLowerCase()) ||
-      source.toLowerCase().includes(r.name.toLowerCase()) ||
-      message.toLowerCase().includes(r.name.toLowerCase())
-  );
+  const combined = `${source} ${message}`.toLowerCase();
+
+  // 1. Exact ID match (e.g., "room-20", "conference")
+  const exactId = allRooms.find((r) => r.id.toLowerCase() === source.toLowerCase().trim());
+  if (exactId) return exactId.id;
+
+  // 2. Room number match (e.g. "Room 20" -> matches "room-20" or "b-room-20")
+  const roomNumMatch = combined.match(/\broom\s*(\d+)\b/i);
+  if (roomNumMatch) {
+    const num = roomNumMatch[1];
+    const targetRoom = allRooms.find(
+      (r) => r.id.toLowerCase() === `room-${num}` || r.id.toLowerCase() === `b-room-${num}` || r.name.toLowerCase().includes(`room ${num}`)
+    );
+    if (targetRoom) return targetRoom.id;
+  }
+
+  // 3. Name & stripped name match (e.g. "Meeting Room", "Kitchen", "Meteorology Lab")
+  const match = allRooms.find((r) => {
+    const rawName = r.name.toLowerCase();
+    const cleanName = rawName.replace(/\s*\([^)]*\)/g, "").trim();
+    return (
+      combined.includes(rawName) ||
+      combined.includes(cleanName) ||
+      rawName.includes(source.toLowerCase()) ||
+      cleanName.includes(source.toLowerCase())
+    );
+  });
   return match ? match.id : null;
 }
 

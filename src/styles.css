@@ -195,6 +195,19 @@
   50% { opacity: 1; }
 }
 
+@keyframes gov-selected-blink {
+  0%, 100% {
+    fill-opacity: 0.85;
+    stroke-opacity: 1;
+    filter: drop-shadow(0 0 6px rgba(217, 119, 6, 0.9));
+  }
+  50% {
+    fill-opacity: 0.2;
+    stroke-opacity: 0.35;
+    filter: drop-shadow(0 0 2px rgba(217, 119, 6, 0.2));
+  }
+}
+
 @keyframes gov-ticker {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
@@ -206,6 +219,10 @@
 
 @utility gov-pulse-fast {
   animation: gov-pulse 1.05s ease-in-out infinite;
+}
+
+@utility gov-selected-blink {
+  animation: gov-selected-blink 0.85s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @utility gov-ticker {

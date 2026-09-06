@@ -63,7 +63,23 @@ function Dashboard() {
         }}
         alarms={alarms}
         log={log}
-        onSelectZone={(id) => setSelected(id)}
+        onSelectZone={(id) => {
+          setSelected(id);
+          const isMaitri = MAITRI_ROOMS.some((r) => r.id === id);
+          if (isMaitri) {
+            if (station !== "maitri") setStation("maitri");
+          } else {
+            if (station !== "bharati") setStation("bharati");
+            const isBharatiPlan = BHARATI_ROOMS.some((r) => r.id === id);
+            if (isBharatiPlan && bg !== "plan") {
+              setBg("plan");
+              setView("plan");
+            } else if (!isBharatiPlan && bg === "plan") {
+              setBg("section");
+              setView("section");
+            }
+          }
+        }}
       />
 
       <div className="flex min-h-0 flex-1">

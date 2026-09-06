@@ -222,12 +222,18 @@ export function BlueprintCanvas({
                     width={z.w}
                     height={z.h}
                     rx={0.4}
-                    className={`cursor-pointer transition-[fill] duration-500 ${
-                      status === "critical" ? "gov-pulse-fast" : status === "warning" ? "gov-pulse-slow" : ""
+                    className={`cursor-pointer transition-[fill] duration-300 ${
+                      isSel
+                        ? "gov-selected-blink"
+                        : status === "critical"
+                        ? "gov-pulse-fast"
+                        : status === "warning"
+                        ? "gov-pulse-slow"
+                        : ""
                     }`}
-                    fill={isSel ? "var(--gov-fill-active)" : STATUS_FILL[status]}
-                    stroke={isSel ? "var(--gov-status-active)" : STATUS_STROKE[status]}
-                    strokeWidth={isSel ? 0.45 : 0.2}
+                    fill={isSel ? "rgba(217, 119, 6, 0.45)" : STATUS_FILL[status]}
+                    stroke={isSel ? "#ff9933" : STATUS_STROKE[status]}
+                    strokeWidth={isSel ? 0.75 : 0.2}
                     vectorEffect="non-scaling-stroke"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -242,6 +248,100 @@ export function BlueprintCanvas({
                   />
                 );
               })}
+
+              {/* TARGET BEACON & HIGHLIGHT OVERLAY FOR SELECTED ROOM */}
+              {visible
+                .filter((z) => selected === z.id)
+                .map((z) => {
+                  const cx = z.x + z.w / 2;
+                  const cy = z.y + z.h / 2;
+                  const maxDim = Math.max(z.w, z.h);
+                  const ringRadius = Math.max(maxDim * 0.75, 4);
+
+                  return (
+                    <g key={`selected-overlay-${z.id}`} className="pointer-events-none">
+                      {/* Animated outer pulsing radar ping ring */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={ringRadius}
+                        fill="none"
+                        stroke="#ff9933"
+                        strokeWidth="0.4"
+                        className="animate-ping origin-center opacity-85"
+                        style={{ transformOrigin: `${cx}% ${cy}%` }}
+                      />
+                      {/* Animated rotating dashed border ring */}
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={ringRadius * 1.3}
+                        fill="none"
+                        stroke="#0284c7"
+                        strokeWidth="0.3"
+                        strokeDasharray="1 1"
+                        className="animate-spin origin-center opacity-70"
+                        style={{ transformOrigin: `${cx}% ${cy}%`, animationDuration: "5s" }}
+                      />
+
+                      {/* Corner target bracket markers */}
+                      <path
+                        d={`M ${z.x - 0.6} ${z.y + 1.8} L ${z.x - 0.6} ${z.y - 0.6} L ${z.x + 1.8} ${z.y - 0.6}`}
+                        fill="none"
+                        stroke="#ff9933"
+                        strokeWidth="0.5"
+                      />
+                      <path
+                        d={`M ${z.x + z.w - 1.8} ${z.y - 0.6} L ${z.x + z.w + 0.6} ${z.y - 0.6} L ${z.x + z.w + 0.6} ${z.y + 1.8}`}
+                        fill="none"
+                        stroke="#ff9933"
+                        strokeWidth="0.5"
+                      />
+                      <path
+                        d={`M ${z.x - 0.6} ${z.y + z.h - 1.8} L ${z.x - 0.6} ${z.y + z.h + 0.6} L ${z.x + 1.8} ${z.y + z.h + 0.6}`}
+                        fill="none"
+                        stroke="#ff9933"
+                        strokeWidth="0.5"
+                      />
+                      <path
+                        d={`M ${z.x + z.w - 1.8} ${z.y + z.h + 0.6} L ${z.x + z.w + 0.6} ${z.y + z.h + 0.6} L ${z.x + z.w + 0.6} ${z.y + z.h - 1.8}`}
+                        fill="none"
+                        stroke="#ff9933"
+                        strokeWidth="0.5"
+                      />
+
+                      {/* Center glowing beacon dot */}
+                      <circle cx={cx} cy={cy} r={1.0} fill="#ff9933" className="gov-pulse-fast" />
+                      <circle cx={cx} cy={cy} r={0.4} fill="#ffffff" />
+
+                      {/* Floating Target Zone badge above room */}
+                      <g transform={`translate(${cx}, ${Math.max(2.2, z.y - 2.5)})`}>
+                        <rect
+                          x="-8.5"
+                          y="-2.4"
+                          width="17"
+                          height="3.0"
+                          rx="0.5"
+                          fill="#002a54"
+                          stroke="#ff9933"
+                          strokeWidth="0.25"
+                        />
+                        <text
+                          x="0"
+                          y="-0.4"
+                          textAnchor="middle"
+                          fill="#ff9933"
+                          fontSize="1.7"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                          letterSpacing="0.1"
+                        >
+                          TARGET ZONE
+                        </text>
+                      </g>
+                    </g>
+                  );
+                })}
             </svg>
           </div>
         </div>
