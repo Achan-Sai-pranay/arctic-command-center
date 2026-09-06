@@ -33,12 +33,12 @@ export const Route = createFileRoute("/")({
 
 function Dashboard() {
   const { readings, log, pushLog, update, alarms } = useTelemetry();
-  const [station, setStation] = useState("bharati");
+  const [station, setStation] = useState("maitri");
   const [collapsed, setCollapsed] = useState(false);
   const [view, setView] = useState<ViewMode>("plan");
   const [bg, setBg] = useState<CanvasBg>("plan");
   const [level, setLevel] = useState(2);
-  const [selected, setSelected] = useState<string | null>("electrical");
+  const [selected, setSelected] = useState<string | null>("meteorology-lab");
   const [filters, setFilters] = useState<Record<Subsystem, boolean>>({
     power: true,
     hvac: true,

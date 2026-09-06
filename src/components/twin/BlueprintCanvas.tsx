@@ -53,7 +53,7 @@ export function BlueprintCanvas({
   const visible = zones.filter((z) => z.subsystems.some((s) => filters[s]));
   const img =
     bg === "plan" ? floorplanAsset.url : bg === "section" ? sectionAsset.url : transverseAsset.url;
-  const ratio = bg === "plan" ? 1545 / 1018 : bg === "section" ? 1600 / 617 : 1600 / 813;
+  const ratio = bg === "plan" ? 1024 / 571 : bg === "section" ? 1600 / 617 : 1600 / 813;
 
   const wheelRef = useRef<(e: WheelEvent) => void>(() => {});
   wheelRef.current = (e: WheelEvent) => {
@@ -108,7 +108,7 @@ export function BlueprintCanvas({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gov-border bg-gov-card px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="rounded-sm bg-gov-navy-header px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-white">
-            {bg === "plan" ? "Plan · Level 2" : bg === "section" ? "Section D–D′" : "Section A–A′"}
+            {bg === "plan" ? "Maitri Station · 2D Blueprint Model" : bg === "section" ? "Section D–D′" : "Section A–A′"}
           </span>
           <span className="truncate text-[11px] text-gov-muted">
             {visible.length} zones instrumented · live 3s polling
