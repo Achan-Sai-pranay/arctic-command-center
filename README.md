@@ -1,228 +1,100 @@
-# Arctic Command Center
+# 🏔️ Arctic Command Center - 2D Digital Twin Dashboard
 
-Build a modern, high-tech 2D Interactive Digital Twin Dashboard for remote management of Indian Antarctic Research Stations (Bharati & Maitri) for Ministry of Earth Sciences (MoES).
+A modern, high-tech **2D Interactive Digital Twin Dashboard** for remote monitoring and management of Indian Antarctic Research Stations (**Bharati Station & Maitri Station**) built for the **Ministry of Earth Sciences (MoES)** and **NCPOR (National Centre for Polar and Ocean Research)**.
 
-🎨 Government Light Theme Color Palette
+---
 
-1. Primary Brand & Header Colors (NIC / MoES Deep Navy)
+## 🛠️ Technology Stack
 
-Header / Primary Navy: #002A54 (Deep Navy Blue - Used for Top Navbar, Header, and Primary Branding)
+| Category | Technologies / Libraries |
+| :--- | :--- |
+| **Framework & Server** | [TanStack Start](https://tanstack.com/router/latest/docs/framework/react/overview) (SSR/CSR React Framework), [Nitro Engine](https://nitro.build/), [Vite 8](https://vitejs.dev/) |
+| **Language** | [TypeScript 5.8](https://www.typescriptlang.org/) |
+| **UI Library & Components** | [React 19](https://react.dev/), [Radix UI Primitives](https://www.radix-ui.com/), [Lucide Icons](https://lucide.dev/) |
+| **Styling & Design System** | [Tailwind CSS v4](https://tailwindcss.com/), `tw-animate-css`, `class-variance-authority` (`cva`), `clsx`, `tailwind-merge` |
+| **State Management & Querying** | [TanStack React Query v5](https://tanstack.com/query/latest), [Zod](https://zod.dev/), [React Hook Form](https://react-hook-form.com/) |
+| **Data Visualization & Canvas** | [Recharts](https://recharts.org/) (24-hour telemetry trend line charts), Interactive SVG Overlay Blueprint Canvas (Zoom, Pan, Zone Mapping) |
+| **Code Quality & Tooling** | ESLint 9, Prettier, Lovable connected integration |
 
-Sub-Header / Brand Accent: #1E40AF (Royal Navy Blue - Active tabs, primary buttons, selected room borders)
+---
 
-Emblem / Accent Gold: #FF9933 / #D97706 (Saffron Gold - Highlights, badge borders, notification counts)
+## 🎨 Design & Palette System (MoES Government Light Theme)
 
-2. Canvas & Surface Backgrounds (Clean Light Gray & White)
+The application adheres to the official MoES / NIC light theme palette:
 
-Main Background (App Canvas): #F4F6F9 (Off-white / Light Grey - Background behind blueprint canvas)
+* **Primary Navy Header**: `#002A54` *(Deep Navy for Navbar & MoES Branding)*
+* **Sub-Header / Brand Accent**: `#1E40AF` *(Royal Navy Blue for active controls & buttons)*
+* **National Accent / Gold**: `#D97706` / `#FF9933` *(Saffron Gold for alerts & badge highlights)*
+* **Canvas & Card Surface**: `#F4F6F9` *(Off-white background)* / `#FFFFFF` *(Pure white panel cards)*
+* **Operational Telemetry Statuses**:
+  * 🟢 **Normal / Operational**: `#15803D` *(Forest Green)*
+  * 🟡 **Caution / Warning**: `#D97706` *(Amber Saffron)*
+  * 🔴 **Critical Alert**: `#DC2626` *(National Red)*
+  * 🔵 **Active Zone Selected**: `#0284C7` *(Ocean Blue)*
 
-Card & Panel Background: #FFFFFF (Pure White - Left sidebar, right inspector panel, bottom log)
+---
 
-Card Border / CAD Grid Lines: #D1D5DB or #E2E8F0 (Light Slate Border - Blueprint grid lines & panel dividers)
+## 🚀 Key Features & Implementation Highlights
 
-Blueprint Overlay Mask: rgba(0, 42, 84, 0.05) (Subtle Navy Tint over CAD image)
+### 1. 🌐 Top Navigation & Live Telemetry Header
+* **Station Switcher**: Toggle between **Bharati Station** (Larsemann Hills, 69°24'S) and **Maitri Station** (Schirmacher Oasis, 70°45'S).
+* **Live Weather Ticker**: Real-time outdoor ambient temperature (-28°C), SW wind speed (42 knots), and solar radiation telemetry.
+* **Dual Time Clock & Link Status**: Real-time UTC/IST dual clocks, satellite connection bandwidth & latency monitor (`VSAT-1 ONLINE | 15.4 Mbps | 640ms`), and emergency alert notification counter.
 
-3. Typography & Icons (High Contrast Text)
+### 2. 🎛️ Left Control & Navigation Panel
+* **View Mode Switcher**:
+  * *Top-Down Floor Plan* (Interactive 2D Blueprint view)
+  * *Vertical Cross-Section* (Side-cut elevation stack)
+  * *Subsystem Grid Matrix*
+* **Level Selector**: Level 1 (Technical & Utility), Level 2 (Living & Command), Level 3 (Terrace & Observatory).
+* **Subsystem Filter Toggles**: Interactive filtering for Power & CHP Generators, HVAC & Heating, Fire & Safety, Crew Occupancy, and Water & Desalination.
 
-Primary Text: #0F172A (Dark Slate Charcoal - Headings, titles, room names)
+### 3. 🗺️ Interactive 2D Digital Twin Blueprint Canvas
+* **High-Resolution CAD Overlays**: Floor plans (Level 2 Living & Command) and Vertical Cross-Sections (Longitudinal & Transverse side cuts).
+* **Smooth Pan & Zoom Engine**: Interactive zoom in, zoom out, reset view controls, and dragging.
+* **Interactive SVG Room Layers**: Clickable SVG zones for Dining Hall, Kitchen & Pantry, Multipurpose Hall, Electrical/HVAC Room, Recreation Area, and Residential Cabins (Rooms 1–34).
+* **Dynamic Pulsing & Hover Tooltips**: Rooms pulse color according to live sensor health with instant hover tooltips showing ambient metrics.
 
-Secondary Text / Labels: #475569 (Muted Slate - Coordinates, units, grid IDs)
+### 4. 📊 Right Room Inspector & Telemetry Panel
+* **Live Sensor Gauges**: Temperature (°C) target sliders, Airflow (CFM), CO2/Smoke (PPM), Power (kW), and Occupancy lists.
+* **24-Hour Historical Trend Charts**: Powered by Recharts for real-time temperature and power consumption history.
+* **Remote Override Actions**: Heating override (+1°C), Exhaust Fan toggle, Door Lock/Unlock, and Alarm Silencing triggers.
 
-Disabled / Inactive Text: #94A3B8 (Light Muted Gray)
+### 5. 📜 Bottom Real-Time Event Log Console
+* **Stream of Telemetry Logs**: Filterable live stream of events, warnings, and system sync notifications stamped with UTC timestamps.
+* **Simulated Telemetry Engine**: Powered by `twin-data.ts` to stream live updates every 3 seconds across all room sensors and station subsystems.
 
-4. Operational Status Colors (Official Telemetry & Room Highlights)
+---
 
-Normal / Operational (Green): #15803D (Forest Green - Room SVG fill: rgba(21, 128, 61, 0.15))
+## 💻 Local Development Setup
 
-Caution / Warning (Amber/Saffron): #D97706 (Deep Saffron - Room SVG fill: rgba(217, 119, 6, 0.20))
+### Prerequisites
+* Node.js (v18+ recommended)
+* npm or pnpm
 
-Critical Alert (Red): #DC2626 (National Red - Room SVG fill: rgba(220, 38, 38, 0.25))
+### Running the App
+```bash
+# Clone the repository
+git clone https://github.com/Achan-Sai-pranay/arctic-command-center.git
+cd arctic-command-center
 
-Active Selected Room (Cyan/Blue): #0284C7 (Ocean Blue - Room SVG fill: rgba(2, 132, 199, 0.30))
+# Install dependencies
+npm install
 
-💻 Quick CSS Variables Copy-Paste Block
-
-css
-
-:root {
-
-  /* Government Light Theme Palette */
-
-  --gov-navy-header: #002a54;
-
-  --gov-navy-primary: #1e40af;
-
-  --gov-saffron-accent: #d97706;
-
-  
-
-  --gov-bg-main: #f4f6f9;
-
-  --gov-bg-card: #ffffff;
-
-  --gov-border: #e2e8f0;
-
-  
-
-  --gov-text-primary: #0f172a;
-
-  --gov-text-secondary: #475569;
-
-  
-
-  /* Telemetry Status Colors */
-
-  --gov-status-normal: #15803d;
-
-  --gov-status-warning: #d97706;
-
-  --gov-status-critical: #dc2626;
-
-  --gov-status-active: #0284c7;
-
-}
-
-🌼 Tailwind CSS Config snippet (if using Tailwind):
-
-javascript
-
-theme: {
-
-  extend: {
-
-    colors: {
-
-      govNavy: {
-
-        900: '#002A54',
-
-        700: '#1E40AF',
-
-      },
-
-      govBg: '#F4F6F9',
-
-      govBorder: '#E2E8F0',
-
-      govSaffron: '#D97706',
-
-    }
-
-  }
-
-}
-
-2:51 PMAYOUT STRUCTURE (4-PANEL DASHBOARD):
-
-1. TOP HEADER BAR:
-
-   - Left: MoES & NCPOR Logo, Station Switcher Dropdown [Bharati Station (Larsemann Hills) | Maitri Station (Schirmacher Oasis)].
-
-   - Center: Live Status Ticker (e.g., "Outside Temp: -28°C | Wind: 42 knots SW | Solar Radiation: Low").
-
-   - Right: Real-time UTC/IST Antarctic Time Clock, Satellite Connection Status Badge ("VSAT-1 ONLINE | Bandwidth: 15.4 Mbps | Latency: 640ms"), Emergency Alert Bell with badge count.
-
-2. LEFT CONTROL & NAVIGATION SIDEBAR (Collapsible, ~250px):
-
-   - View Mode Switcher:
-
-     * "Floor Plan (Top-Down)" [Primary View]
-
-     * "Vertical Cross-Section (Side Cut)" [Elevations View]
-
-     * "Subsystem Grid Matrix"
-
-   - Level Selector (for Bharati Station):
-
-     * Level 3: Terrace & Observatory
-
-     * Level 2: Living & Command Zone (Active)
-
-     * Level 1: Technical & Utility Zone
-
-   - Subsystem Filter Toggle Buttons:
-
-     * [x] Power & CHP Generators
-
-     * [x] HVAC & Heating
-
-     * [x] Fire & Safety
-
-     * [x] Crew Occupancy
-
-     * [x] Water & Desalination
-
-3. CENTER MAIN INTERACTIVE CANVAS:
-
-   - Primary View: Displays the blueprint image overlay (Image 3: Top-Down Floor Plan of Level 2) with a smooth zoom/pan controls (Zoom In, Zoom Out, Reset Pan).
-
-   - Interactive Room Layers: SVG overlay paths mapped over key blueprint zones:
-
-     * Dining Hall (Grid 1-4)
-
-     * Kitchen & Pantry (Grid 4-7)
-
-     * Multipurpose Hall (Grid 13-17)
-
-     * Electrical / HVAC Room (Grid 12-13)
-
-     * Common Workspace & Recreation Room (Grid 17-21)
-
-     * Residential Rooms 1 to 34
-
-   - Visual Feedback: Rooms pulse green (normal), yellow (warning), or red (critical alert). Hovering over a room shows a quick tooltip with temperature, humidity, and occupancy. Clicking a room opens the Right Telemetry Panel.
-
-   - View Toggle Switch: Option to swap background image to Image 2 (Longitudinal Section) to view the vertical 3-floor stack on stilts.
-
-4. RIGHT ROOM INSPECTOR & TELEMETRY PANEL (320px):
-
-   - Header: Selected Room Name (e.g., "ELECTRICAL / HVAC ROOM - Grid 12-13").
-
-   - Live Telemetry Gauges:
-
-     * Temperature (°C) with target threshold slider.
-
-     * Airflow (CFM) & HVAC status.
-
-     * Smoke/CO2 Level (PPM).
-
-     * Power Consumption (kW).
-
-     * Occupant count & active crew list.
-
-   - Historical Trend Line Chart (Recharts): 24-hour temperature and energy consumption graph.
-
-   - Remote Control Triggers: "Override Heating (+1°C)", "Toggle Exhaust Fan", "Lock/Unlock Door", "Silence Alarm".
-
-5. BOTTOM EVENT LOG & ALARM CONSOLE (Resizable drawer):
-
-   - Filterable stream of real-time telemetry events:
-
-     * [02:14:10 UTC] [INFO] Level 2 Kitchen: Stove power cycle completed.
-
-     * [02:12:05 UTC] [WARN] Level 1 Power House: CHP Genset 2 temperature threshold > 85°C.
-
-     * [02:00:00 UTC] [SUCCESS] VSAT Telemetry packet synced to NCPOR Goa Server.
-
-Make all components fully responsive, interactive with dummy state hooks, micro-animations, and simulated live telemetry data updating every 3 seconds.
-
-This project was built with [Lovable](https://lovable.dev).
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/0fb70d51-2a4b-47c9-be1e-94bb3f7a5e9f).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+# Start local development server
 npm run dev
 ```
+
+### Building for Production
+```bash
+# Verify TypeScript & build production bundle
+npm run build
+
+# Preview production build locally
+npm run preview
+```
+
+---
+
+## 🤝 Lovable Integration
+This repository is connected with [Lovable](https://lovable.dev). Commits pushed to `main` automatically synchronize back to the Lovable editor.
