@@ -4,7 +4,7 @@ import floorplanAsset from "@/assets/floorplan-level2.png.asset.json";
 import sectionAsset from "@/assets/section-longitudinal.png.asset.json";
 import transverseAsset from "@/assets/section-transverse.png.asset.json";
 import type { Reading } from "@/lib/telemetry";
-import { FLOOR_ROOMS, SECTION_ZONES, type Room, type Status, type Subsystem } from "@/lib/twin-data";
+import { BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, type Room, type Status, type Subsystem } from "@/lib/twin-data";
 
 const STATUS_FILL: Record<Status, string> = {
   normal: "var(--gov-fill-normal)",
@@ -24,6 +24,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 export type CanvasBg = "plan" | "section" | "transverse";
 
 export function BlueprintCanvas({
+  station = "maitri",
   bg,
   onBg,
   readings,
@@ -31,6 +32,7 @@ export function BlueprintCanvas({
   onSelect,
   filters,
 }: {
+  station?: string;
   bg: CanvasBg;
   onBg: (b: CanvasBg) => void;
   readings: Record<string, Reading>;
@@ -47,13 +49,28 @@ export function BlueprintCanvas({
   stateRef.current = { zoom, offset };
 
   const zones: Room[] =
-    bg === "plan"
-      ? FLOOR_ROOMS
+    station === "maitri"
+      ? MAITRI_ROOMS
+      : bg === "plan"
+      ? BHARATI_ROOMS
       : (SECTION_ZONES.map((z) => ({ ...z })) as unknown as Room[]);
   const visible = zones.filter((z) => z.subsystems.some((s) => filters[s]));
   const img =
-    bg === "plan" ? floorplanAsset.url : bg === "section" ? sectionAsset.url : transverseAsset.url;
-  const ratio = bg === "plan" ? 1024 / 571 : bg === "section" ? 1600 / 617 : 1600 / 813;
+    station === "maitri"
+      ? "/assets/maitri-blueprint.png"
+      : bg === "plan"
+      ? floorplanAsset.url
+      : bg === "section"
+      ? sectionAsset.url
+      : transverseAsset.url;
+  const ratio =
+    station === "maitri"
+      ? 1024 / 571
+      : bg === "plan"
+      ? 1545 / 1018
+      : bg === "section"
+      ? 1600 / 617
+      : 1600 / 813;
 
   const wheelRef = useRef<(e: WheelEvent) => void>(() => {});
   wheelRef.current = (e: WheelEvent) => {
@@ -108,34 +125,42 @@ export function BlueprintCanvas({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gov-border bg-gov-card px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <span className="rounded-sm bg-gov-navy-header px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-white">
-            {bg === "plan" ? "Maitri Station · 2D Blueprint Model" : bg === "section" ? "Section D–D′" : "Section A–A′"}
+            {station === "maitri"
+              ? "Maitri Station · 2D Blueprint Model"
+              : bg === "plan"
+              ? "Bharati Station · Level 2 Plan"
+              : bg === "section"
+              ? "Bharati Station · Section D–D′"
+              : "Bharati Station · Section A–A′"}
           </span>
           <span className="truncate text-[11px] text-gov-muted">
             {visible.length} zones instrumented · live 3s polling
           </span>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {(
-            [
-              ["plan", "Floor Plan"],
-              ["section", "Longitudinal"],
-              ["transverse", "Transverse"],
-            ] as [CanvasBg, string][]
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onBg(id)}
-              className={`rounded-sm border px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                bg === id
-                  ? "border-gov-navy-primary bg-gov-navy-primary text-white"
-                  : "border-gov-border bg-white text-gov-muted hover:border-gov-navy-primary hover:text-gov-navy-primary"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {station === "bharati" && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {(
+              [
+                ["plan", "Floor Plan"],
+                ["section", "Longitudinal"],
+                ["transverse", "Transverse"],
+              ] as [CanvasBg, string][]
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onBg(id)}
+                className={`rounded-sm border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                  bg === id
+                    ? "border-gov-navy-primary bg-gov-navy-primary text-white"
+                    : "border-gov-border bg-white text-gov-muted hover:border-gov-navy-primary hover:text-gov-navy-primary"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div

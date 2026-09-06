@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CREW_NAMES, FLOOR_ROOMS, SECTION_ZONES, type Status } from "./twin-data";
+import { CREW_NAMES, BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, type Status } from "./twin-data";
 
 export type Reading = {
   temp: number;
@@ -20,7 +20,7 @@ export type Reading = {
 export type LogLevel = "INFO" | "WARN" | "CRITICAL" | "SUCCESS";
 export type LogEntry = { id: number; time: string; level: LogLevel; source: string; message: string };
 
-const ALL = [...FLOOR_ROOMS, ...SECTION_ZONES];
+const ALL = [...BHARATI_ROOMS, ...MAITRI_ROOMS, ...SECTION_ZONES];
 
 const rnd = (n: number) => (Math.random() - 0.5) * n;
 const round = (n: number, d = 1) => Number(n.toFixed(d));

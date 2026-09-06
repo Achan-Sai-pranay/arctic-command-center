@@ -89,6 +89,7 @@ function Dashboard() {
               />
             ) : (
               <BlueprintCanvas
+                station={station}
                 bg={bg}
                 onBg={(b) => {
                   setBg(b);
