@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Crosshair, Maximize2, Minus, Plus } from "lucide-react";
+import { AlertTriangle, Crosshair, Maximize2, Minus, Plus, X } from "lucide-react";
 import floorplanAsset from "@/assets/floorplan-level2.png.asset.json";
 import sectionAsset from "@/assets/section-longitudinal.png.asset.json";
 import transverseAsset from "@/assets/section-transverse.png.asset.json";
-import type { Reading } from "@/lib/telemetry";
+import type { LogEntry, Reading } from "@/lib/telemetry";
 import { BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, type Room, type Status, type Subsystem } from "@/lib/twin-data";
 
 const STATUS_FILL: Record<Status, string> = {
@@ -31,6 +31,8 @@ export function BlueprintCanvas({
   selected,
   onSelect,
   filters,
+  activeAlert,
+  onDismissAlert,
 }: {
   station?: string;
   bg: CanvasBg;
@@ -39,6 +41,8 @@ export function BlueprintCanvas({
   selected: string | null;
   onSelect: (id: string) => void;
   filters: Record<Subsystem, boolean>;
+  activeAlert?: LogEntry | null;
+  onDismissAlert?: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -54,7 +58,7 @@ export function BlueprintCanvas({
       : bg === "plan"
       ? BHARATI_ROOMS
       : (SECTION_ZONES.map((z) => ({ ...z })) as unknown as Room[]);
-  const visible = zones.filter((z) => z.subsystems.some((s) => filters[s]));
+  const visible = zones.filter((z) => z.id === selected || z.subsystems.some((s) => filters[s]));
   const img =
     station === "maitri"
       ? "/assets/maitri-blueprint.png"
@@ -116,9 +120,60 @@ export function BlueprintCanvas({
     setOffset({ x: 0, y: 0 });
   };
 
+  const prevStation = useRef(station);
+  const prevBg = useRef(bg);
+  const lastTargetZoneRef = useRef<string | null>(null);
+
+  // When station or bg view is changed manually, reset to centered full overview (zoom 1.0)
   useEffect(() => {
-    reset();
-  }, [bg]);
+    const stationChanged = prevStation.current !== station;
+    const bgChanged = prevBg.current !== bg;
+    prevStation.current = station;
+    prevBg.current = bg;
+
+    if (stationChanged || bgChanged) {
+      lastTargetZoneRef.current = null;
+      setZoom(1);
+      setOffset({ x: 0, y: 0 });
+    }
+  }, [station, bg]);
+
+  // Smoothly pan & zoom in to 1.45x on selected target area ONLY ONCE upon new selection
+  useEffect(() => {
+    if (!selected) {
+      lastTargetZoneRef.current = null;
+      return;
+    }
+
+    // Only auto-zoom once when a new zone is selected, allowing user to freely zoom out / pan afterwards
+    if (lastTargetZoneRef.current === selected) return;
+    lastTargetZoneRef.current = selected;
+
+    const selZone = visible.find((z) => z.id === selected);
+    if (!selZone) return;
+
+    const timer = setTimeout(() => {
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      const targetZoom = 1.45;
+      const cx = selZone.x + selZone.w / 2;
+      const cy = selZone.y + selZone.h / 2;
+
+      const vx = (cx / 100 - 0.5) * rect.width;
+      const vy = (cy / 100 - 0.5) * rect.height;
+
+      setZoom(targetZoom);
+      setOffset({
+        x: -vx * targetZoom,
+        y: -vy * targetZoom,
+      });
+    }, 40);
+
+    return () => clearTimeout(timer);
+  }, [selected, visible]);
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-gov-bg">
@@ -189,6 +244,40 @@ export function BlueprintCanvas({
           setHover(null);
         }}
       >
+        {/* INCIDENT ALERT HUD BANNER (Displayed when navigating from alert, until user moves/dismisses) */}
+        {activeAlert && (
+          <div className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-30 flex w-[92%] max-w-xl items-center justify-between gap-3 rounded border border-gov-critical/60 bg-white/97 px-3.5 py-2 shadow-2xl backdrop-blur animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border ${
+                activeAlert.level === "CRITICAL"
+                  ? "border-gov-critical bg-gov-critical/15 text-gov-critical"
+                  : "border-gov-warning bg-gov-warning/15 text-gov-warning"
+              }`}>
+                <AlertTriangle className="h-4 w-4 gov-pulse-fast" />
+              </span>
+              <div className="min-w-0 leading-tight">
+                <div className="flex items-center gap-2">
+                  <span className={`font-mono text-[10px] font-bold uppercase tracking-wider ${
+                    activeAlert.level === "CRITICAL" ? "text-gov-critical" : "text-gov-warning"
+                  }`}>
+                    {activeAlert.level} ALERT · {activeAlert.source}
+                  </span>
+                  <span className="font-mono text-[9px] text-gov-muted">[{activeAlert.time}]</span>
+                </div>
+                <p className="truncate text-xs font-semibold text-gov-text">{activeAlert.message}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onDismissAlert}
+              className="flex items-center gap-1 rounded-sm border border-gov-border bg-gov-bg px-2 py-1 font-mono text-[10px] font-bold text-gov-text hover:bg-gov-border transition-colors shrink-0"
+              title="Dismiss alert banner"
+            >
+              Acknowledge <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
         <div
           className="absolute inset-0 flex items-center justify-center p-4"
           style={{
@@ -214,6 +303,7 @@ export function BlueprintCanvas({
                 const r = readings[z.id];
                 const status = r?.status ?? z.status;
                 const isSel = selected === z.id;
+                const isAlert = isSel && Boolean(activeAlert);
                 return (
                   <rect
                     key={z.id}
@@ -223,17 +313,19 @@ export function BlueprintCanvas({
                     height={z.h}
                     rx={0.4}
                     className={`cursor-pointer transition-[fill] duration-300 ${
-                      isSel
+                      isAlert
                         ? "gov-selected-blink"
+                        : isSel
+                        ? ""
                         : status === "critical"
                         ? "gov-pulse-fast"
                         : status === "warning"
                         ? "gov-pulse-slow"
                         : ""
                     }`}
-                    fill={isSel ? "rgba(217, 119, 6, 0.45)" : STATUS_FILL[status]}
-                    stroke={isSel ? "#ff9933" : STATUS_STROKE[status]}
-                    strokeWidth={isSel ? 0.75 : 0.2}
+                    fill={isAlert ? "rgba(239, 68, 68, 0.4)" : isSel ? "rgba(217, 119, 6, 0.25)" : STATUS_FILL[status]}
+                    stroke={isAlert ? "#ef4444" : isSel ? "#ff9933" : STATUS_STROKE[status]}
+                    strokeWidth={isSel ? 0.65 : 0.2}
                     vectorEffect="non-scaling-stroke"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -249,94 +341,92 @@ export function BlueprintCanvas({
                 );
               })}
 
-              {/* TARGET BEACON & HIGHLIGHT OVERLAY FOR SELECTED ROOM */}
+              {/* TARGET OVERLAY FOR SELECTED ROOM */}
               {visible
                 .filter((z) => selected === z.id)
                 .map((z) => {
                   const cx = z.x + z.w / 2;
                   const cy = z.y + z.h / 2;
-                  const maxDim = Math.max(z.w, z.h);
-                  const ringRadius = Math.max(maxDim * 0.75, 4);
+                  const isAlert = Boolean(activeAlert);
+                  const strokeColor = isAlert
+                    ? activeAlert?.level === "CRITICAL"
+                      ? "#ef4444"
+                      : "#ff9933"
+                    : "#ff9933";
 
                   return (
                     <g key={`selected-overlay-${z.id}`} className="pointer-events-none">
-                      {/* Animated outer pulsing radar ping ring */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={ringRadius}
-                        fill="none"
-                        stroke="#ff9933"
-                        strokeWidth="0.4"
-                        className="animate-ping origin-center opacity-85"
-                        style={{ transformOrigin: `${cx}% ${cy}%` }}
-                      />
-                      {/* Animated rotating dashed border ring */}
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={ringRadius * 1.3}
-                        fill="none"
-                        stroke="#0284c7"
-                        strokeWidth="0.3"
-                        strokeDasharray="1 1"
-                        className="animate-spin origin-center opacity-70"
-                        style={{ transformOrigin: `${cx}% ${cy}%`, animationDuration: "5s" }}
-                      />
+                      {/* Subtle single alert ping ring ONLY if triggered from an alert */}
+                      {isAlert && (
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={Math.max(z.w, z.h) * 0.7}
+                          fill="none"
+                          stroke={strokeColor}
+                          strokeWidth="0.4"
+                          className="animate-ping origin-center opacity-75"
+                          style={{ transformOrigin: `${cx}% ${cy}%` }}
+                        />
+                      )}
 
                       {/* Corner target bracket markers */}
                       <path
                         d={`M ${z.x - 0.6} ${z.y + 1.8} L ${z.x - 0.6} ${z.y - 0.6} L ${z.x + 1.8} ${z.y - 0.6}`}
                         fill="none"
-                        stroke="#ff9933"
+                        stroke={strokeColor}
                         strokeWidth="0.5"
                       />
                       <path
                         d={`M ${z.x + z.w - 1.8} ${z.y - 0.6} L ${z.x + z.w + 0.6} ${z.y - 0.6} L ${z.x + z.w + 0.6} ${z.y + 1.8}`}
                         fill="none"
-                        stroke="#ff9933"
+                        stroke={strokeColor}
                         strokeWidth="0.5"
                       />
                       <path
                         d={`M ${z.x - 0.6} ${z.y + z.h - 1.8} L ${z.x - 0.6} ${z.y + z.h + 0.6} L ${z.x + 1.8} ${z.y + z.h + 0.6}`}
                         fill="none"
-                        stroke="#ff9933"
+                        stroke={strokeColor}
                         strokeWidth="0.5"
                       />
                       <path
                         d={`M ${z.x + z.w - 1.8} ${z.y + z.h + 0.6} L ${z.x + z.w + 0.6} ${z.y + z.h + 0.6} L ${z.x + z.w + 0.6} ${z.y + z.h - 1.8}`}
                         fill="none"
-                        stroke="#ff9933"
+                        stroke={strokeColor}
                         strokeWidth="0.5"
                       />
 
-                      {/* Center glowing beacon dot */}
-                      <circle cx={cx} cy={cy} r={1.0} fill="#ff9933" className="gov-pulse-fast" />
-                      <circle cx={cx} cy={cy} r={0.4} fill="#ffffff" />
+                      {/* Center Glowing Beacon Marker (Alert only) */}
+                      {isAlert && (
+                        <>
+                          <circle cx={cx} cy={cy} r={1.0} fill={strokeColor} className="gov-pulse-fast" />
+                          <circle cx={cx} cy={cy} r={0.35} fill="#ffffff" />
+                        </>
+                      )}
 
                       {/* Floating Target Zone badge above room */}
                       <g transform={`translate(${cx}, ${Math.max(2.2, z.y - 2.5)})`}>
                         <rect
-                          x="-8.5"
+                          x={isAlert ? "-10" : "-8.5"}
                           y="-2.4"
-                          width="17"
+                          width={isAlert ? "20" : "17"}
                           height="3.0"
                           rx="0.5"
                           fill="#002a54"
-                          stroke="#ff9933"
+                          stroke={strokeColor}
                           strokeWidth="0.25"
                         />
                         <text
                           x="0"
                           y="-0.4"
                           textAnchor="middle"
-                          fill="#ff9933"
-                          fontSize="1.7"
+                          fill={strokeColor}
+                          fontSize="1.6"
                           fontFamily="monospace"
                           fontWeight="bold"
                           letterSpacing="0.1"
                         >
-                          TARGET ZONE
+                          {isAlert ? "INCIDENT TARGET" : "TARGET ZONE"}
                         </text>
                       </g>
                     </g>

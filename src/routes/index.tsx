@@ -7,7 +7,9 @@ import { InspectorPanel } from "@/components/twin/InspectorPanel";
 import { MatrixView } from "@/components/twin/MatrixView";
 import { EventLog } from "@/components/twin/EventLog";
 import { useTelemetry } from "@/lib/telemetry";
-import type { Subsystem } from "@/lib/twin-data";
+import { resolveZoneInfo, MAITRI_ROOMS, SECTION_ZONES, type Subsystem } from "@/lib/twin-data";
+import { cryptoTelecommand } from "@/lib/crypto-telecommand";
+import { DualSignatureModal } from "@/components/twin/DualSignatureModal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,6 +41,8 @@ function Dashboard() {
   const [bg, setBg] = useState<CanvasBg>("plan");
   const [level, setLevel] = useState(2);
   const [selected, setSelected] = useState<string | null>("meteorology-lab");
+  const [activeAlert, setActiveAlert] = useState<any | null>(null);
+  const [showDualSigModal, setShowDualSigModal] = useState(false);
   const [filters, setFilters] = useState<Record<Subsystem, boolean>>({
     power: true,
     hvac: true,
@@ -49,8 +53,51 @@ function Dashboard() {
 
   const setViewMode = (v: ViewMode) => {
     setView(v);
-    if (v === "plan") setBg("plan");
-    if (v === "section") setBg("section");
+    setSelected(null);
+    setActiveAlert(null);
+    if (v === "plan") {
+      setBg("plan");
+    }
+    if (v === "section") {
+      setBg("section");
+      if (station === "maitri") {
+        setStation("bharati");
+      }
+    }
+  };
+
+  const handleSelectZone = (
+    id: string,
+    targetStation?: "maitri" | "bharati",
+    targetView?: "plan" | "section" | "transverse",
+    alert?: any | null
+  ) => {
+    const loc = resolveZoneInfo("", "", id);
+    const destStation =
+      targetStation || loc?.station || (MAITRI_ROOMS.some((r) => r.id === id) ? "maitri" : "bharati");
+    const destView =
+      targetView || loc?.view || (SECTION_ZONES.some((r) => r.id === id) ? "section" : "plan");
+
+    if (station !== destStation) {
+      setStation(destStation);
+      pushLog("INFO", "Station Auto-Switch", `Navigated to ${destStation.toUpperCase()} Station for inspection.`);
+    }
+
+    if (destView === "section" || destView === "transverse") {
+      setView("section");
+      setBg(destView as CanvasBg);
+    } else {
+      setView("plan");
+      setBg("plan");
+    }
+
+    setSelected(id);
+    setActiveAlert(alert ?? null);
+  };
+
+  const handleEmergencyOverride = (command: string) => {
+    cryptoTelecommand.createRequest(command, station, selected || "station-wide");
+    setShowDualSigModal(true);
   };
 
   return (
@@ -59,27 +106,13 @@ function Dashboard() {
         station={station}
         onStation={(s) => {
           setStation(s);
+          setSelected(null);
+          setActiveAlert(null);
           pushLog("INFO", "Station Switch", `Operator switched telemetry context to ${s.toUpperCase()} station.`);
         }}
         alarms={alarms}
         log={log}
-        onSelectZone={(id) => {
-          setSelected(id);
-          const isMaitri = MAITRI_ROOMS.some((r) => r.id === id);
-          if (isMaitri) {
-            if (station !== "maitri") setStation("maitri");
-          } else {
-            if (station !== "bharati") setStation("bharati");
-            const isBharatiPlan = BHARATI_ROOMS.some((r) => r.id === id);
-            if (isBharatiPlan && bg !== "plan") {
-              setBg("plan");
-              setView("plan");
-            } else if (!isBharatiPlan && bg === "plan") {
-              setBg("section");
-              setView("section");
-            }
-          }
-        }}
+        onSelectZone={handleSelectZone}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -104,7 +137,7 @@ function Dashboard() {
                 readings={readings}
                 filters={filters}
                 selected={selected}
-                onSelect={setSelected}
+                onSelect={(id) => handleSelectZone(id, undefined, undefined, null)}
               />
             ) : (
               <BlueprintCanvas
@@ -112,12 +145,16 @@ function Dashboard() {
                 bg={bg}
                 onBg={(b) => {
                   setBg(b);
+                  setSelected(null);
+                  setActiveAlert(null);
                   setView(b === "plan" ? "plan" : "section");
                 }}
                 readings={readings}
                 selected={selected}
-                onSelect={setSelected}
+                onSelect={(id) => handleSelectZone(id, undefined, undefined, null)}
                 filters={filters}
+                activeAlert={activeAlert}
+                onDismissAlert={() => setActiveAlert(null)}
               />
             )}
             <InspectorPanel
@@ -125,11 +162,19 @@ function Dashboard() {
               reading={selected ? readings[selected] : undefined}
               onUpdate={update}
               onLog={pushLog}
+              onEmergencyOverride={handleEmergencyOverride}
             />
           </div>
-          <EventLog log={log} />
+          <EventLog log={log} onSelectZone={handleSelectZone} />
         </main>
       </div>
+
+      {showDualSigModal && (
+        <DualSignatureModal
+          onClose={() => setShowDualSigModal(false)}
+          onExecuteLog={(msg) => pushLog("SUCCESS", "CRYPTOGRAPHIC TELECOMMAND", msg)}
+        />
+      )}
     </div>
   );
 }

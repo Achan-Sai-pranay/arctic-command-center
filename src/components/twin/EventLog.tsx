@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Terminal } from "lucide-react";
+import { ChevronDown, ChevronUp, Terminal, ExternalLink } from "lucide-react";
 import type { LogEntry, LogLevel } from "@/lib/telemetry";
+import { resolveZoneInfo } from "@/lib/twin-data";
 
 const LEVEL_STYLE: Record<LogLevel, string> = {
   INFO: "text-gov-navy-primary border-gov-navy-primary/40 bg-gov-navy-primary/5",
@@ -11,7 +12,18 @@ const LEVEL_STYLE: Record<LogLevel, string> = {
 
 const FILTERS: (LogLevel | "ALL")[] = ["ALL", "INFO", "WARN", "CRITICAL", "SUCCESS"];
 
-export function EventLog({ log }: { log: LogEntry[] }) {
+export function EventLog({
+  log,
+  onSelectZone,
+}: {
+  log: LogEntry[];
+  onSelectZone?: (
+    id: string,
+    targetStation?: "maitri" | "bharati",
+    targetView?: "plan" | "section" | "transverse",
+    alert?: LogEntry | null
+  ) => void;
+}) {
   const [open, setOpen] = useState(true);
   const [filter, setFilter] = useState<LogLevel | "ALL">("ALL");
   const [height, setHeight] = useState(176);
@@ -76,17 +88,37 @@ export function EventLog({ log }: { log: LogEntry[] }) {
       {open && (
         <div className="overflow-y-auto border-t border-gov-border" style={{ height }}>
           <ul className="divide-y divide-gov-border">
-            {rows.map((l) => (
-              <li key={l.id} className="flex items-start gap-2 px-3 py-1.5 hover:bg-gov-bg">
-                <span className="shrink-0 font-mono text-[10px] text-gov-muted">[{l.time}]</span>
-                <span
-                  className={`shrink-0 rounded-[2px] border px-1.5 font-mono text-[9px] font-bold ${LEVEL_STYLE[l.level]}`}
+            {rows.map((l) => {
+              const loc = resolveZoneInfo(l.source, l.message, l.zoneId) || (l.zoneId ? { id: l.zoneId, station: l.station || "maitri", view: l.view || "plan", name: l.source } : null);
+              return (
+                <li
+                  key={l.id}
+                  onClick={() => {
+                    if (loc && onSelectZone) {
+                      onSelectZone(loc.id, loc.station, loc.view, l);
+                    }
+                  }}
+                  className={`flex items-center justify-between gap-2 px-3 py-1.5 transition-colors hover:bg-gov-bg ${
+                    loc ? "cursor-pointer group" : ""
+                  }`}
                 >
-                  {l.level}
-                </span>
-                <span className="min-w-0 truncate font-mono text-[11px] text-gov-text">{l.message}</span>
-              </li>
-            ))}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 font-mono text-[10px] text-gov-muted">[{l.time}]</span>
+                    <span
+                      className={`shrink-0 rounded-[2px] border px-1.5 font-mono text-[9px] font-bold ${LEVEL_STYLE[l.level]}`}
+                    >
+                      {l.level}
+                    </span>
+                    <span className="min-w-0 truncate font-mono text-[11px] text-gov-text">{l.message}</span>
+                  </div>
+                  {loc && (
+                    <span className="hidden shrink-0 items-center gap-1 font-mono text-[9px] font-bold text-gov-navy-primary opacity-0 group-hover:opacity-100 sm:flex">
+                      {loc.station === "maitri" ? "Maitri Plan" : loc.view === "section" ? "Bharati Section" : "Bharati Plan"} <ExternalLink className="h-2.5 w-2.5" />
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

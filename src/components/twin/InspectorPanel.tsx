@@ -27,11 +27,13 @@ export function InspectorPanel({
   reading,
   onUpdate,
   onLog,
+  onEmergencyOverride,
 }: {
   selected: string | null;
   reading: Reading | undefined;
   onUpdate: (id: string, patch: Partial<Reading>) => void;
   onLog: (level: "INFO" | "WARN" | "CRITICAL" | "SUCCESS", source: string, message: string) => void;
+  onEmergencyOverride?: (command: string) => void;
 }) {
   const zone = ALL.find((z) => z.id === selected);
   const activeReading =
@@ -181,6 +183,17 @@ export function InspectorPanel({
               act(`local alarm ${activeReading.alarmSilenced ? "re-armed" : "silenced"}.`, "WARN");
             }}
           />
+          <button
+            onClick={() => {
+              if (onEmergencyOverride) {
+                onEmergencyOverride(`TRIGGER_EMERGENCY_ISOLATION_${zone.id.toUpperCase()}`);
+              }
+            }}
+            className="w-full flex items-center justify-center gap-1.5 rounded border border-amber-500/60 bg-amber-500/15 py-1.5 px-2 text-xs font-bold text-amber-300 hover:bg-amber-500/30 transition-all mt-2"
+          >
+            <Lock className="h-3.5 w-3.5 text-gov-saffron" />
+            <span>Dual-Sig Emergency Override</span>
+          </button>
         </div>
       </div>
     </aside>

@@ -1800,3 +1800,102 @@ export const STATIONS = [
     crew: 18,
   },
 ] as const;
+
+export type ZoneLocation = {
+  id: string;
+  name: string;
+  station: "maitri" | "bharati";
+  view: "plan" | "section" | "transverse";
+};
+
+export function resolveZoneInfo(source = "", message = "", explicitZoneId?: string): ZoneLocation | null {
+  // 1. Direct ID resolution
+  if (explicitZoneId) {
+    const sRoom = SECTION_ZONES.find((r) => r.id === explicitZoneId);
+    if (sRoom) return { id: sRoom.id, name: sRoom.name, station: "bharati", view: "section" };
+
+    const mRoom = MAITRI_ROOMS.find((r) => r.id === explicitZoneId);
+    if (mRoom) return { id: mRoom.id, name: mRoom.name, station: "maitri", view: "plan" };
+
+    const bRoom = BHARATI_ROOMS.find((r) => r.id === explicitZoneId);
+    if (bRoom) return { id: bRoom.id, name: bRoom.name, station: "bharati", view: "plan" };
+  }
+
+  const src = source.trim();
+  const srcLower = src.toLowerCase();
+  const combined = `${source} ${message}`.toLowerCase();
+
+  // 2. Exact ID matches
+  const secById = SECTION_ZONES.find((r) => r.id.toLowerCase() === srcLower);
+  if (secById) return { id: secById.id, name: secById.name, station: "bharati", view: "section" };
+
+  const maitriById = MAITRI_ROOMS.find((r) => r.id.toLowerCase() === srcLower);
+  if (maitriById) return { id: maitriById.id, name: maitriById.name, station: "maitri", view: "plan" };
+
+  const bharatiById = BHARATI_ROOMS.find((r) => r.id.toLowerCase() === srcLower);
+  if (bharatiById) return { id: bharatiById.id, name: bharatiById.name, station: "bharati", view: "plan" };
+
+  // 3. Exact Name matches
+  const secByName = SECTION_ZONES.find((r) => r.name.toLowerCase() === srcLower);
+  if (secByName) return { id: secByName.id, name: secByName.name, station: "bharati", view: "section" };
+
+  const maitriByName = MAITRI_ROOMS.find((r) => r.name.toLowerCase() === srcLower);
+  if (maitriByName) return { id: maitriByName.id, name: maitriByName.name, station: "maitri", view: "plan" };
+
+  const bharatiByName = BHARATI_ROOMS.find((r) => r.name.toLowerCase() === srcLower);
+  if (bharatiByName) return { id: bharatiByName.id, name: bharatiByName.name, station: "bharati", view: "plan" };
+
+  // 4. Section keyword matches (Cross section has specific mechanical & level 1/3 zones)
+  const secBySub = SECTION_ZONES.find((r) => {
+    const clean = r.name.toLowerCase().replace(/\s*\([^)]*\)/g, "").trim();
+    return combined.includes(r.name.toLowerCase()) || (clean.length > 4 && combined.includes(clean));
+  });
+  if (secBySub) return { id: secBySub.id, name: secBySub.name, station: "bharati", view: "section" };
+
+  // 5. Maitri-specific landmarks (labs, generators, recreation)
+  const maitriSpecific = MAITRI_ROOMS.find((r) => {
+    const clean = r.name.toLowerCase().replace(/\s*\([^)]*\)/g, "").trim();
+    return combined.includes(r.name.toLowerCase()) || (clean.length > 4 && combined.includes(clean));
+  });
+  if (maitriSpecific && (maitriSpecific.id.includes("lab") || maitriSpecific.id.includes("generator") || maitriSpecific.id.includes("fuel") || maitriSpecific.id.includes("recreation"))) {
+    return { id: maitriSpecific.id, name: maitriSpecific.name, station: "maitri", view: "plan" };
+  }
+
+  // 6. Room Number Matching
+  const roomNumMatch = combined.match(/\broom\s*(\d+)\b/i);
+  if (roomNumMatch) {
+    const num = parseInt(roomNumMatch[1], 10);
+    if (combined.includes("bharati") || combined.includes("b-room")) {
+      const bRoom = BHARATI_ROOMS.find((r) => r.id === `b-room-${num}`) || BHARATI_ROOMS.find((r) => r.name.toLowerCase().includes(`room ${num}`));
+      if (bRoom) return { id: bRoom.id, name: bRoom.name, station: "bharati", view: "plan" };
+    }
+    if (combined.includes("maitri")) {
+      const mRoom = MAITRI_ROOMS.find((r) => r.id === `room-${num}`) || MAITRI_ROOMS.find((r) => r.name.toLowerCase().includes(`room ${num}`));
+      if (mRoom) return { id: mRoom.id, name: mRoom.name, station: "maitri", view: "plan" };
+    }
+    if (num > 18) {
+      const mRoom = MAITRI_ROOMS.find((r) => r.id === `room-${num}`);
+      if (mRoom) return { id: mRoom.id, name: mRoom.name, station: "maitri", view: "plan" };
+    }
+    const mRoom = MAITRI_ROOMS.find((r) => r.id === `room-${num}`);
+    if (mRoom) return { id: mRoom.id, name: mRoom.name, station: "maitri", view: "plan" };
+    const bRoom = BHARATI_ROOMS.find((r) => r.id === `b-room-${num}`);
+    if (bRoom) return { id: bRoom.id, name: bRoom.name, station: "bharati", view: "plan" };
+  }
+
+  // 7. Generic Bharati floorplan match
+  const bharatiMatch = BHARATI_ROOMS.find((r) => {
+    const clean = r.name.toLowerCase().replace(/\s*\([^)]*\)/g, "").trim();
+    return combined.includes(r.name.toLowerCase()) || (clean.length > 4 && combined.includes(clean));
+  });
+  if (bharatiMatch) return { id: bharatiMatch.id, name: bharatiMatch.name, station: "bharati", view: "plan" };
+
+  // 8. Generic Maitri floorplan match
+  const maitriMatch = MAITRI_ROOMS.find((r) => {
+    const clean = r.name.toLowerCase().replace(/\s*\([^)]*\)/g, "").trim();
+    return combined.includes(r.name.toLowerCase()) || (clean.length > 4 && combined.includes(clean));
+  });
+  if (maitriMatch) return { id: maitriMatch.id, name: maitriMatch.name, station: "maitri", view: "plan" };
+
+  return null;
+}

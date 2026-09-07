@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, ChevronDown, ExternalLink, Radio, Snowflake, Trash2, X, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { Bell, ChevronDown, ExternalLink, Radio, Snowflake, Trash2, X, AlertTriangle, Info, CheckCircle2, Gauge } from "lucide-react";
 import { useClock, type LogEntry, type LogLevel } from "@/lib/telemetry";
-import { BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, STATIONS } from "@/lib/twin-data";
+import { resolveZoneInfo, STATIONS } from "@/lib/twin-data";
+import { SatelliteStatusPill } from "./SatelliteStatusPill";
+import { BandwidthStatsWidget } from "./BandwidthStatsWidget";
 
 const TICKER = [
   "Outside Temp: -28°C",
@@ -20,38 +22,6 @@ const LEVEL_STYLE: Record<LogLevel, { badge: string; icon: typeof AlertTriangle 
   SUCCESS: { badge: "bg-gov-normal/15 text-gov-normal border-gov-normal/30", icon: CheckCircle2 },
 };
 
-function findRoomId(source: string, message: string): string | null {
-  const allRooms = [...BHARATI_ROOMS, ...MAITRI_ROOMS, ...SECTION_ZONES];
-  const combined = `${source} ${message}`.toLowerCase();
-
-  // 1. Exact ID match (e.g., "room-20", "conference")
-  const exactId = allRooms.find((r) => r.id.toLowerCase() === source.toLowerCase().trim());
-  if (exactId) return exactId.id;
-
-  // 2. Room number match (e.g. "Room 20" -> matches "room-20" or "b-room-20")
-  const roomNumMatch = combined.match(/\broom\s*(\d+)\b/i);
-  if (roomNumMatch) {
-    const num = roomNumMatch[1];
-    const targetRoom = allRooms.find(
-      (r) => r.id.toLowerCase() === `room-${num}` || r.id.toLowerCase() === `b-room-${num}` || r.name.toLowerCase().includes(`room ${num}`)
-    );
-    if (targetRoom) return targetRoom.id;
-  }
-
-  // 3. Name & stripped name match (e.g. "Meeting Room", "Kitchen", "Meteorology Lab")
-  const match = allRooms.find((r) => {
-    const rawName = r.name.toLowerCase();
-    const cleanName = rawName.replace(/\s*\([^)]*\)/g, "").trim();
-    return (
-      combined.includes(rawName) ||
-      combined.includes(cleanName) ||
-      rawName.includes(source.toLowerCase()) ||
-      cleanName.includes(source.toLowerCase())
-    );
-  });
-  return match ? match.id : null;
-}
-
 export function TopHeader({
   station,
   onStation,
@@ -63,7 +33,12 @@ export function TopHeader({
   onStation: (id: string) => void;
   alarms: number;
   log?: LogEntry[];
-  onSelectZone?: (id: string) => void;
+  onSelectZone?: (
+    id: string,
+    targetStation?: "maitri" | "bharati",
+    targetView?: "plan" | "section" | "transverse",
+    alert?: LogEntry | null
+  ) => void;
 }) {
   const now = useClock();
   const utcTime = now.toISOString().slice(11, 19);
@@ -71,6 +46,7 @@ export function TopHeader({
   const active = STATIONS.find((s) => s.id === station)!;
 
   const [open, setOpen] = useState(false);
+  const [showBandwidthWidget, setShowBandwidthWidget] = useState(false);
   const [filter, setFilter] = useState<LogLevel | "ALL">("ALL");
   const [dismissed, setDismissed] = useState<Set<number>>(new Set());
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -149,6 +125,17 @@ export function TopHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <SatelliteStatusPill />
+
+          <button
+            onClick={() => setShowBandwidthWidget(!showBandwidthWidget)}
+            title="Open Bandwidth Savings Inspector (85% Protobuf Reduction)"
+            className="flex items-center gap-1 rounded-sm border border-gov-saffron/50 bg-gov-saffron/15 px-2 py-1 text-xs font-bold text-gov-saffron hover:bg-gov-saffron/30"
+          >
+            <Gauge className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">85% Bandwidth</span>
+          </button>
+
           <div className="hidden text-right leading-tight md:block">
             <p className="font-mono text-sm font-semibold tabular-nums">{utcTime} UTC</p>
             <p className="font-mono text-[10px] text-white/60">{ist} IST · {active.coords}</p>
@@ -238,19 +225,19 @@ export function TopHeader({
                     filteredLogs.map((l) => {
                       const style = LEVEL_STYLE[l.level];
                       const Icon = style.icon;
-                      const roomId = findRoomId(l.source, l.message);
+                      const loc = resolveZoneInfo(l.source, l.message, l.zoneId) || (l.zoneId ? { id: l.zoneId, station: l.station || "maitri", view: l.view || "plan", name: l.source } : null);
 
                       return (
                         <div
                           key={l.id}
                           onClick={() => {
-                            if (roomId && onSelectZone) {
-                              onSelectZone(roomId);
+                            if (loc && onSelectZone) {
+                              onSelectZone(loc.id, loc.station, loc.view, l);
                               setOpen(false);
                             }
                           }}
                           className={`group flex items-start gap-2.5 p-3 transition-colors hover:bg-gov-bg ${
-                            roomId ? "cursor-pointer" : ""
+                            loc ? "cursor-pointer" : ""
                           }`}
                         >
                           <div className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border ${style.badge}`}>
@@ -263,10 +250,15 @@ export function TopHeader({
                               <span className="shrink-0 font-mono text-[9px] text-gov-muted">{l.time}</span>
                             </div>
                             <p className="mt-0.5 text-xs text-gov-text/80">{l.message}</p>
-                            {roomId && (
-                              <p className="mt-1 flex items-center gap-1 font-mono text-[10px] font-bold text-gov-navy-primary group-hover:underline">
-                                Inspect Zone <ExternalLink className="h-3 w-3" />
-                              </p>
+                            {loc && (
+                              <div className="mt-1 flex items-center justify-between gap-2">
+                                <span className="rounded-[2px] bg-gov-bg px-1.5 py-0.5 font-mono text-[9px] font-medium text-gov-muted border border-gov-border">
+                                  {loc.station === "maitri" ? "Maitri · 2D Plan" : loc.view === "section" ? "Bharati · Cross-Section" : "Bharati · Floor Plan"}
+                                </span>
+                                <span className="flex items-center gap-1 font-mono text-[10px] font-bold text-gov-navy-primary group-hover:underline">
+                                  Inspect Zone <ExternalLink className="h-3 w-3" />
+                                </span>
+                              </div>
                             )}
                           </div>
 
@@ -288,7 +280,16 @@ export function TopHeader({
           </div>
         </div>
       </div>
+
+      {showBandwidthWidget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md">
+            <BandwidthStatsWidget onClose={() => setShowBandwidthWidget(false)} />
+          </div>
+        </div>
+      )}
     </header>
   );
 }
+
 

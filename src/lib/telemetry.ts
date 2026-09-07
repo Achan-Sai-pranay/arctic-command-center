@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CREW_NAMES, BHARATI_ROOMS, MAITRI_ROOMS, SECTION_ZONES, type Status } from "./twin-data";
+import { edgeStoreForward } from "./edge-store-forward";
+import { protobufMonitor } from "./protobuf-bandwidth";
 
 export type Reading = {
   temp: number;
@@ -18,7 +20,16 @@ export type Reading = {
 };
 
 export type LogLevel = "INFO" | "WARN" | "CRITICAL" | "SUCCESS";
-export type LogEntry = { id: number; time: string; level: LogLevel; source: string; message: string };
+export type LogEntry = {
+  id: number;
+  time: string;
+  level: LogLevel;
+  source: string;
+  message: string;
+  zoneId?: string;
+  station?: "maitri" | "bharati";
+  view?: "plan" | "section" | "transverse";
+};
 
 const ALL = [...BHARATI_ROOMS, ...MAITRI_ROOMS, ...SECTION_ZONES];
 
@@ -75,15 +86,61 @@ const LOG_TEMPLATES: { level: LogLevel; message: (name: string) => string }[] = 
 export function useTelemetry() {
   const [readings, setReadings] = useState<Record<string, Reading>>(seed);
   const [log, setLog] = useState<LogEntry[]>(() => [
-    { id: 3, time: utc(), level: "SUCCESS", source: "VSAT-1", message: "Telemetry link established with NCPOR Goa Server." },
-    { id: 2, time: utc(new Date(Date.now() - 120_000)), level: "WARN", source: "Power House", message: "CHP Genset 2 temperature threshold > 85°C." },
-    { id: 1, time: utc(new Date(Date.now() - 240_000)), level: "INFO", source: "Kitchen", message: "Stove power cycle completed." },
+    {
+      id: 3,
+      time: utc(),
+      level: "SUCCESS",
+      source: "VSAT-1",
+      message: "Telemetry link established with NCPOR Goa Server.",
+    },
+    {
+      id: 2,
+      time: utc(new Date(Date.now() - 120_000)),
+      level: "WARN",
+      source: "Primary Power Generator CHP-1/2",
+      message: "CHP Genset 2 temperature threshold > 85°C.",
+      zoneId: "s-power-l1",
+      station: "bharati",
+      view: "section",
+    },
+    {
+      id: 1,
+      time: utc(new Date(Date.now() - 240_000)),
+      level: "INFO",
+      source: "Main Kitchen",
+      message: "Stove power cycle completed.",
+      zoneId: "kitchen",
+      station: "bharati",
+      view: "plan",
+    },
   ]);
   const idRef = useRef(4);
 
-  const pushLog = useCallback((level: LogLevel, source: string, message: string) => {
-    setLog((prev) => [{ id: idRef.current++, time: utc(), level, source, message }, ...prev].slice(0, 120));
-  }, []);
+  const pushLog = useCallback(
+    (
+      level: LogLevel,
+      source: string,
+      message: string,
+      meta?: { zoneId?: string; station?: "maitri" | "bharati"; view?: "plan" | "section" | "transverse" }
+    ) => {
+      setLog((prev) =>
+        [
+          {
+            id: idRef.current++,
+            time: utc(),
+            level,
+            source,
+            message,
+            zoneId: meta?.zoneId,
+            station: meta?.station,
+            view: meta?.view,
+          },
+          ...prev,
+        ].slice(0, 120)
+      );
+    },
+    []
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -110,6 +167,21 @@ export function useTelemetry() {
             status,
             history: [...cur.history.slice(1), { t: "now", temp, power }],
           };
+
+          // Record telemetry in store-and-forward engine & protobuf monitor
+          const isMaitri = MAITRI_ROOMS.some((st) => st.id === r.id);
+          const stationName = isMaitri ? "maitri" : "bharati";
+          edgeStoreForward.addTelemetry(stationName, r.id, { temp, power, ppm, status });
+          protobufMonitor.recordTransmission({
+            station: stationName,
+            zoneId: r.id,
+            temp,
+            humidity: cur.humidity,
+            power,
+            ppm,
+            status,
+            timestamp: new Date().toISOString(),
+          });
         }
         return next;
       });
@@ -117,7 +189,16 @@ export function useTelemetry() {
       if (Math.random() > 0.35) {
         const room = ALL[Math.floor(Math.random() * ALL.length)]!;
         const tpl = LOG_TEMPLATES[Math.floor(Math.random() * LOG_TEMPLATES.length)]!;
-        pushLog(tpl.level, room.name, tpl.message(room.name));
+        const isMaitri = MAITRI_ROOMS.some((r) => r.id === room.id);
+        const isSection = SECTION_ZONES.some((r) => r.id === room.id);
+        const st: "maitri" | "bharati" = isMaitri ? "maitri" : "bharati";
+        const vw: "plan" | "section" = isSection ? "section" : "plan";
+
+        pushLog(tpl.level, room.name, tpl.message(room.name), {
+          zoneId: room.id,
+          station: st,
+          view: vw,
+        });
       }
     }, 3000);
     return () => clearInterval(timer);
